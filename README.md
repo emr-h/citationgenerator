@@ -73,7 +73,7 @@ Groq AI (LLaMA 3): Uses AI to understand raw HTML and extract citation metadata
 
 The user can select which method to use — or default to "Auto" (tries all).
 
-###📷 Screenshots
+### 📷 Screenshots
 <img src="web/public/demo.png" width="700" alt="Demo Screenshot">
 ## 📜 License
 MIT © EMERSON
