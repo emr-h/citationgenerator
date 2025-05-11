@@ -1,3 +1,5 @@
+// server.js (Final Enhanced Version)
+
 import express from "express";
 import Cite from "citation-js";
 import axios from "axios";
@@ -12,8 +14,15 @@ const openai = new OpenAI({
 });
 
 const app = express();
+import authRoutes from "./routes/auth.js";
+import citationRoutes from "./routes/citations.js";
 const PORT = process.env.PORT || 4000;
+
 app.use(cors());
+app.use(express.json()); // Parses JSON body
+app.use('/api', authRoutes);
+app.use('/api', citationRoutes);
+
 
 /* --- helpers ------------------------------------------------------------ */
 
@@ -50,25 +59,11 @@ async function scrapeMeta(url) {
 }
 
 async function getMetadataWithAI(html) {
-  const prompt = `
-Extract citation information from the following article HTML.
-
-Return as JSON with these fields only:
-{
-  "title": "...",
-  "author": "...",
-  "issued": "YYYY-MM-DD"
-}
-
-Only respond with pure JSON.
-
-HTML:
-${html.slice(0, 12000)}
-`;
+  const prompt = `Extract citation information from the following article HTML. Return as JSON with these fields only: {\n  \"title\": \"...\",\n  \"author\": \"...\",\n  \"issued\": \"YYYY-MM-DD\"\n}`;
 
   const completion = await openai.chat.completions.create({
     model: "llama3-70b-8192",
-    messages: [{ role: "user", content: prompt }],
+    messages: [{ role: "user", content: prompt + "\n\nHTML:\n" + html.slice(0, 12000) }],
     temperature: 0.3
   });
 
@@ -83,6 +78,14 @@ ${html.slice(0, 12000)}
 
 function cleanText(input) {
   return input?.replace(/\s+/g, " ").trim();
+}
+
+function injectAccessDate(record) {
+  const today = new Date();
+  record.accessed = {
+    "date-parts": [[today.getFullYear(), today.getMonth() + 1, today.getDate()]]
+  };
+  return record;
 }
 
 /* --- route -------------------------------------------------------------- */
@@ -102,13 +105,10 @@ app.get("/api/cite", async (req, res) => {
       record = cite.data[0];
     } else if (method === "scrape") {
       record = await scrapeMeta(url);
-      console.log("📝 Scraped record:", record);
     } else if (method === "ai") {
-      console.log("🤖 Using AI to extract citation data...");
       const { data: html } = await axios.get(url, { timeout: 8000 });
       const aiData = await getMetadataWithAI(html);
       record = { ...aiData, URL: url };
-      console.log("🧠 AI-generated record:", record);
     } else {
       try {
         const cite = new Cite(url);
@@ -116,19 +116,18 @@ app.get("/api/cite", async (req, res) => {
         record = cite.data[0];
       } catch {
         record = await scrapeMeta(url);
-        if (
-          !record?.title ||
-          !record?.author ||
-          !record?.issued ||
-          record.title === "Unknown Title"
-        ) {
-          console.log("🤖 Auto fallback to AI...");
+        if (!record?.title || !record?.author || !record?.issued || record.title === "Unknown Title") {
           const { data: html } = await axios.get(url, { timeout: 8000 });
           const aiData = await getMetadataWithAI(html);
           record = { ...aiData, URL: url };
-          console.log("🧠 AI-generated record:", record);
         }
       }
+    }
+
+    // 📌 Inject access date for Harvard and Chicago styles
+    const accessStyles = ["harvard-cite-them-right", "chicago-author-date"];
+    if (accessStyles.includes(style)) {
+      record = injectAccessDate(record);
     }
 
     let inText, reference;
@@ -154,7 +153,7 @@ app.get("/api/cite", async (req, res) => {
       const author = record.author || "Unknown";
 
       inText = `(${author}, ${year})`;
-      reference = `<p>${author}. ${year}. <i>Unknown Title</i>.</p>`;
+      reference = `<p>${author}. ${year}. <i>${record.title || "Unknown Title"}</i>.</p>`;
     }
 
     res.json({ inText, reference, record });
@@ -169,3 +168,17 @@ app.get("/api/cite", async (req, res) => {
 app.listen(PORT, () =>
   console.log(`API running on http://localhost:${PORT}`)
 );
+
+import db from './db.js';
+
+app.get('/api/dbtest', async (req, res) => {
+  try {
+    const result = await db.query('SELECT NOW()');
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('❌ FULL DB ERROR:', err); // log entire error object
+    res.status(500).json({
+      error: err?.message || err?.code || JSON.stringify(err) || 'Unknown DB error'
+    });
+  }
+});

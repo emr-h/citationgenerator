@@ -5,13 +5,6 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -23,4 +16,64 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* === Citation Generator Enhanced Styles === */
+
+.citation-container {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px;
+  flex-wrap: wrap;
+}
+
+.citation-box {
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  width: 45%;
+  min-width: 300px;
+  position: relative;
+}
+
+.citation-box h2 {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #2b2b2b;
+}
+
+.citation-box p {
+  background: #f0f2f5;
+  padding: 15px;
+  border-radius: 8px;
+  font-family: monospace;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  margin-bottom: 15px;
+}
+
+.copy-btn {
+  background-color: #4A90E2;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copy-btn:hover {
+  background-color: #357ABD;
+}
+
+.copy-btn:active {
+  transform: scale(0.97);
 }
